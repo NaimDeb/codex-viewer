@@ -1,0 +1,123 @@
+{
+  "_charts-ClY5T9-b.js": {
+    "file": "assets/charts-ClY5T9-b.js",
+    "name": "charts",
+    "imports": [
+      "_react-BC6YT7ka.js",
+      "_vendor-CRtNZSG-.js"
+    ]
+  },
+  "_dnd-DG94xIDY.js": {
+    "file": "assets/dnd-DG94xIDY.js",
+    "name": "dnd",
+    "imports": [
+      "_react-BC6YT7ka.js"
+    ]
+  },
+  "_markdown-BLXV7QPC.js": {
+    "file": "assets/markdown-BLXV7QPC.js",
+    "name": "markdown",
+    "imports": [
+      "_vendor-CRtNZSG-.js",
+      "_react-BC6YT7ka.js"
+    ]
+  },
+  "_monaco-BPrGKuBp.css": {
+    "file": "assets/monaco-BPrGKuBp.css",
+    "src": "_monaco-BPrGKuBp.css"
+  },
+  "_monaco-gFyehTEE.js": {
+    "file": "assets/monaco-gFyehTEE.js",
+    "name": "monaco",
+    "imports": [
+      "_vendor-CRtNZSG-.js",
+      "_react-BC6YT7ka.js"
+    ],
+    "css": [
+      "assets/monaco-BPrGKuBp.css"
+    ],
+    "assets": [
+      "assets/codicon-ngg6Pgfi.ttf"
+    ]
+  },
+  "_react-BC6YT7ka.js": {
+    "file": "assets/react-BC6YT7ka.js",
+    "name": "react"
+  },
+  "_vendor-CRtNZSG-.js": {
+    "file": "assets/vendor-CRtNZSG-.js",
+    "name": "vendor",
+    "isDynamicEntry": true,
+    "imports": [
+      "_react-BC6YT7ka.js"
+    ]
+  },
+  "index.html": {
+    "file": "assets/index-CEsgKVTR.js",
+    "name": "index",
+    "src": "index.html",
+    "isEntry": true,
+    "imports": [
+      "_react-BC6YT7ka.js",
+      "_vendor-CRtNZSG-.js",
+      "_dnd-DG94xIDY.js",
+      "_monaco-gFyehTEE.js",
+      "_markdown-BLXV7QPC.js",
+      "_charts-ClY5T9-b.js"
+    ],
+    "dynamicImports": [
+      "src/components/SnippetEditor.tsx",
+      "_vendor-CRtNZSG-.js",
+      "_vendor-CRtNZSG-.js"
+    ],
+    "css": [
+      "assets/index-Cdg5daWY.css"
+    ],
+    "assets": [
+      "assets/ds-CDCay-zy.png",
+      "assets/n3ds-47yPSi4m.png",
+      "assets/switch2-QBTGOV14.png",
+      "assets/wii-C0fyaEqG.png",
+      "assets/wiiu-wj_q5KyP.png"
+    ]
+  },
+  "node_modules/monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon.ttf": {
+    "file": "assets/codicon-ngg6Pgfi.ttf",
+    "src": "node_modules/monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon.ttf"
+  },
+  "src/assets/cases/ds.png": {
+    "file": "assets/ds-CDCay-zy.png",
+    "src": "src/assets/cases/ds.png"
+  },
+  "src/assets/cases/n3ds.png": {
+    "file": "assets/n3ds-47yPSi4m.png",
+    "src": "src/assets/cases/n3ds.png"
+  },
+  "src/assets/cases/switch2.png": {
+    "file": "assets/switch2-QBTGOV14.png",
+    "src": "src/assets/cases/switch2.png"
+  },
+  "src/assets/cases/wii.png": {
+    "file": "assets/wii-C0fyaEqG.png",
+    "src": "src/assets/cases/wii.png"
+  },
+  "src/assets/cases/wiiu.png": {
+    "file": "assets/wiiu-wj_q5KyP.png",
+    "src": "src/assets/cases/wiiu.png"
+  },
+  "src/components/SnippetEditor.tsx": {
+    "file": "assets/SnippetEditor-BDyX_1Jh.js",
+    "name": "SnippetEditor",
+    "src": "src/components/SnippetEditor.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_react-BC6YT7ka.js",
+      "_monaco-gFyehTEE.js",
+      "index.html",
+      "_vendor-CRtNZSG-.js",
+      "_dnd-DG94xIDY.js",
+      "_markdown-BLXV7QPC.js",
+      "_charts-ClY5T9-b.js"
+    ]
+  }
+}

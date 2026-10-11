@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#0d0f13" />
+<title>Codex — copie hors-ligne</title>
+<!--
+  Opened by the QR in Paramètres → Accès distant → Copie hors-ligne (served by
+  the PC's LAN server). Gathers a snapshot of the data — and, if asked, shrinks
+  every cover to a small JPEG — then hands it to the HTTPS-hosted viewer in a
+  new window with postMessage. The data goes PC → phone over the Wi-Fi only.
+  See src/lib/viewer.ts for the receiving side.
+-->
+<style>
+  :root { color-scheme: dark; --bg: #0d0f13; --surface: #15181f; --border: #262a33; --text: #e8eaee; --muted: #9aa0ab; --accent: #4f8cff; --success: #4ade80; --danger: #ff6b6b; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  main { width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 22px; }
+  h1 { margin: 0 0 4px; font-size: 18px; }
+  p { margin: 8px 0; color: var(--muted); font-size: 14px; }
+  .bar { height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; margin: 14px 0 6px; }
+  .bar > div { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+  button { width: 100%; margin-top: 14px; padding: 12px; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font: inherit; font-weight: 600; }
+  button:disabled { opacity: .4; }
+  .ok { color: var(--success); } .err { color: var(--danger); }
+  small { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">Copie hors-ligne</h1>
+  <p id="status">Préparation…</p>
+  <div class="bar"><div id="fill"></div></div>
+  <small id="detail"></small>
+  <button id="go" disabled>Copier sur ce téléphone</button>
+</main>
+<script>
+(() => {
+  const EN = !/^fr/i.test(navigator.language || "");
+  const T = (fr, en) => (EN ? en : fr);
+  const $ = (id) => document.getElementById(id);
+  const say = (msg, cls) => { $("status").textContent = msg; $("status").className = cls || ""; };
+  const progress = (done, total) => { $("fill").style.width = total ? Math.round((done / total) * 100) + "%" : "100%"; };
+
+  $("title").textContent = T("Copie hors-ligne", "Offline copy");
+  $("go").textContent = T("Copier sur ce téléphone", "Copy to this phone");
+
+  const p = new URLSearchParams(location.hash.slice(1));
+  const pin = p.get("pin") || "";
+  const withImages = p.get("img") === "1";
+  const viewer = p.get("v") || "";
+  let viewerOrigin = "";
+  try { viewerOrigin = new URL(viewer).origin; } catch { /* checked below */ }
+  // HTTPS, or a local preview of the viewer while developing it.
+  if (!pin || !(viewerOrigin.startsWith("https://") || /^http:\/\/localhost(:\d+)?$/.test(viewerOrigin))) {
+    say(T("QR incomplet — le régénérer depuis le PC.", "Incomplete QR — generate it again on the PC."), "err");
+    return;
+  }
+
+  const api = (path) => fetch("/api/" + path, { headers: { "x-codex-pin": pin } }).then((r) => {
+    if (r.status === 401) throw new Error(T("Code PIN refusé — rescanner le QR.", "PIN refused — scan the QR again."));
+    if (!r.ok) throw new Error("/api/" + path + " → " + r.status);
+    return r;
+  });
+
+  // Small, uniform covers: 240 px wide is sharp on a phone card, ~10 kB each.
+  const MAX_W = 240, MAX_H = 360, QUALITY = 0.72;
+  async function shrink(blob) {
+    const bmp = await createImageBitmap(blob);
+    const k = Math.min(1, MAX_W / bmp.width, MAX_H / bmp.height);
+    const w = Math.max(1, Math.round(bmp.width * k)), h = Math.max(1, Math.round(bmp.height * k));
+    const c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    c.getContext("2d").drawImage(bmp, 0, 0, w, h);
+    bmp.close && bmp.close();
+    return new Promise((res) => c.toBlob(res, "image/jpeg", QUALITY));
+  }
+  const imagePath = (cover) => cover.startsWith("http")
+    ? "remote-image?url=" + encodeURIComponent(cover)
+    : "image/" + encodeURIComponent(cover.split(/[\\/]/).pop());
+
+  let snapshot = null;
+
+  async function prepare() {
+    say(T("Lecture des listes sur le PC…", "Reading the lists on the PC…"));
+    const docs = await (await api("state")).json();
+    for (const k of Object.keys(docs)) if (k.startsWith("snippets/")) delete docs[k];
+    const images = [];
+    if (withImages) {
+      const covers = new Set();
+      for (const [k, v] of Object.entries(docs)) {
+        if (!k.startsWith("entities/")) continue;
+        try { for (const e of JSON.parse(v)) if (typeof e.cover === "string" && e.cover) covers.add(e.cover); } catch { /* skip */ }
+      }
+      // The profile picture travels with the covers.
+      try { const pr = JSON.parse(docs["sync/profile"] || "{}"); if (typeof pr.avatar === "string" && pr.avatar) covers.add(pr.avatar); } catch { /* none */ }
+      const all = [...covers];
+      let done = 0, bytes = 0, failed = 0;
+      const step = () => {
+        progress(done, all.length);
+        say(T("Images : " + done + " / " + all.length, "Images: " + done + " / " + all.length));
+        $("detail").textContent = (bytes / 1048576).toFixed(1) + T(" Mo", " MB") + (failed ? T(" · " + failed + " introuvables", " · " + failed + " not found") : "");
+      };
+      let next = 0;
+      const worker = async () => {
+        while (next < all.length) {
+          const cover = all[next++];
+          try {
+            const blob = await shrink(await (await api(imagePath(cover))).blob());
+            if (blob) { images.push({ key: cover, blob }); bytes += blob.size; } else failed++;
+          } catch { failed++; }
+          done++;
+          if (done % 10 === 0 || done === all.length) step();
+        }
+      };
+      step();
+      await Promise.all(Array.from({ length: 6 }, worker));
+    }
+    progress(1, 1);
+    snapshot = { type: "codex-snapshot", at: new Date().toISOString(), withImages, docs, images };
+    const lists = Object.keys(docs).filter((k) => k.startsWith("lists/")).length;
+    say(T("Prêt : " + lists + " listes" + (withImages ? ", " + images.length + " images" : ""), "Ready: " + lists + " lists" + (withImages ? ", " + images.length + " images" : "")), "ok");
+    $("go").disabled = false;
+  }
+
+  // A popup needs a tap, so the window opens from the button. The viewer
+  // announces « ready » until it gets the snapshot, and answers « done ».
+  $("go").addEventListener("click", () => {
+    const w = window.open(viewer.replace(/#.*$/, "") + "#receive", "_blank");
+    if (!w) { say(T("Fenêtre bloquée — autoriser les pop-ups pour cette page.", "Window blocked — allow pop-ups for this page."), "err"); return; }
+    say(T("Envoi vers l'appli…", "Sending to the app…"));
+    $("go").disabled = true;
+    let sent = false;
+    window.addEventListener("message", (e) => {
+      if (e.origin !== viewerOrigin || e.source !== w) return;
+      if (e.data && e.data.type === "codex-viewer-ready" && !sent) {
+        sent = true;
+        w.postMessage(snapshot, viewerOrigin);
+      } else if (e.data && e.data.type === "codex-viewer-done") {
+        say(T("Copie terminée. L'appli peut s'installer sur l'écran d'accueil depuis son onglet ; cette page peut être fermée.", "Copy done. The app can be added to the home screen from its tab; this page can be closed."), "ok");
+      }
+    });
+  });
+
+  prepare().catch((e) => say(String(e && e.message || e), "err"));
+})();
+</script>
+</body>
+</html>
